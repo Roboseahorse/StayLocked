@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import List, Set
 
-from hardlock.config import PROFILES_DIR, load_allowlist, save_allowlist
+from staylocked.config import PROFILES_DIR, load_allowlist, save_allowlist
 
 
 def get_current_allowlist() -> Set[str]:

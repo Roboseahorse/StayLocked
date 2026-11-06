@@ -2,7 +2,7 @@
 Entry point: python -m hardlock
 """
 
-from hardlock.app import main
+from Staylocked.app import main
 
 if __name__ == "__main__":
     main()

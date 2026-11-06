@@ -14,8 +14,8 @@ import psutil
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
-from hardlock import __version__
-from hardlock.config import (
+from staylocked import __version__
+from staylocked.config import (
     APP_NAME,
     APP_VERSION,
     load_config,
@@ -25,16 +25,16 @@ from hardlock.config import (
     load_last_session,
     save_last_session,
 )
-from hardlock.session import (
+from staylocked.session import (
     save_active_session,
     clear_active_session,
     load_active_session,
 )
-from hardlock.enforcer import Enforcer
-from hardlock.modes import BlockRunner
-from hardlock.emergency import show_emergency_stop_dialog
-from hardlock.updater import check_for_updates, perform_update, ensure_installed
-from hardlock.allowlist import list_profiles, load_profile, save_profile
+from staylocked.enforcer import Enforcer
+from staylocked.modes import BlockRunner
+from staylocked.emergency import show_emergency_stop_dialog
+from staylocked.updater import check_for_updates, perform_update, ensure_installed
+from staylocked.allowlist import list_profiles, load_profile, save_profile
 
 # Optional notifications
 try:
@@ -48,7 +48,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
 
-class HardLockApp(ctk.CTk):
+class StayLockedApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
@@ -131,7 +131,7 @@ class HardLockApp(ctk.CTk):
 
         brand = ctk.CTkLabel(
             top,
-            text="  HARDLOCK",
+            text="  Staylocked",
             font=ctk.CTkFont(family="Helvetica", size=18, weight="bold"),
             text_color="#D82C2C",
         )
@@ -725,7 +725,7 @@ class HardLockApp(ctk.CTk):
             self.save_last_session_ui()
             self._persist_active()
             if not resume:
-                self.notify("HardLock session started. Stay strong.")
+                self.notify("Staylocked session started. Stay strong.")
             self.status_var.set("BLOCK ACTIVE — only allowlisted apps permitted")
             self.after(200, self.update_timer_display)
             self.after(10000, self.periodic_save)
@@ -771,7 +771,7 @@ class HardLockApp(ctk.CTk):
         self.timer_label.configure(text="")
         self.progress.set(0)
         self.status_var.set("Ready. Select apps and start a focus session.")
-        self.notify("HardLock session ended.")
+        self.notify("Staylocked session ended.")
         self.runner = None
         self.enforcer = None
 
@@ -804,7 +804,7 @@ class HardLockApp(ctk.CTk):
             secs = (datetime.fromisoformat(end) - datetime.now()).total_seconds()
             remaining = f"\nRemaining: ~{int(secs // 60)} minutes"
         if messagebox.askyesno(
-            "Resume HardLock Session?",
+            "Resume Staylocked Session?",
             f"An interrupted focus session was found.{remaining}\n\n"
             "Would you like to resume it now?",
         ):
@@ -826,7 +826,7 @@ class HardLockApp(ctk.CTk):
             f"A new version ({latest}) is available.\n\n"
             f"You are running {APP_VERSION}.\n\n"
             "Download and install automatically now?\n"
-            "HardLock will restart and resume any active session.",
+            "SoftLock will restart and resume any active session.",
         ):
             self._persist_active()
             perform_update(
@@ -865,5 +865,5 @@ class HardLockApp(ctk.CTk):
 
 
 def main():
-    app = HardLockApp()
+    app = StayLockedApp()
     app.mainloop()

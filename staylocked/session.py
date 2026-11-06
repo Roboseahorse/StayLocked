@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from typing import Any, Optional
 
-from hardlock.config import SESSION_FILE, APP_VERSION
+from staylocked.config import SESSION_FILE, APP_VERSION
 
 
 def save_active_session(

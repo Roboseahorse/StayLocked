@@ -10,16 +10,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from hardlock import __version__
+from staylocked import __version__
 
-APP_NAME = "HardLock"
+APP_NAME = "StayLocked"
 APP_VERSION = __version__
 
 # Change this to your own GitHub repo once you create it
 # Format: https://api.github.com/repos/USERNAME/REPO/releases/latest
-UPDATE_CHECK_URL = "https://api.github.com/repos/AstroLabs-UK/HardLock/releases/latest"
+UPDATE_CHECK_URL = "https://api.github.com/repos/Roboseahorse/StayLocked/releases/latest"
 
-APP_DIR = Path.home() / ".hardlock"
+APP_DIR = Path.home() / ".staylocked"
 APP_DIR.mkdir(exist_ok=True)
 
 ALLOWLIST_FILE = APP_DIR / "allowlist.json"
@@ -35,7 +35,7 @@ if sys.platform == "win32":
 else:
     INSTALL_DIR = Path.home() / ".local" / "share" / "HardLock"
 
-INSTALL_EXE = INSTALL_DIR / "HardLock.exe"
+INSTALL_EXE = INSTALL_DIR / "StayLocked.exe"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "force_close": True,

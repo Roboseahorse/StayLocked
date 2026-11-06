@@ -2,7 +2,7 @@
 Platform-specific helpers (Windows / macOS / Linux).
 """
 
-from hardlock.platform.windows import (
+from staylocked.platform.windows import (
     HAS_WIN32,
     minimize_process_windows,
     is_dangerous_process,

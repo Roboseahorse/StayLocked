@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
-from hardlock.config import (
+from staylocked.config import (
     APP_NAME,
     APP_VERSION,
     INSTALL_DIR,

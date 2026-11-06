@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from hardlock.config import PROFILES_DIR, APP_DIR
-from hardlock.allowlist import (
+from staylocked.config import PROFILES_DIR, APP_DIR
+from staylocked.allowlist import (
     list_profiles,
     load_profile,
     save_profile,

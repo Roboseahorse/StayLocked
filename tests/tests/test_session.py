@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from hardlock.session import (
+from staylocked.session import (
     save_active_session,
     load_active_session,
     clear_active_session,
 )
-from hardlock import config as cfg
+from staylocked import config as cfg
 
 
 def test_save_and_load_session(tmp_path, monkeypatch):

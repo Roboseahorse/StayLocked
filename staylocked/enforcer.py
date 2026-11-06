@@ -7,7 +7,7 @@ from __future__ import annotations
 import psutil
 from typing import Set
 
-from hardlock.platform import HAS_WIN32, minimize_process_windows, is_dangerous_process
+from staylocked.platform import HAS_WIN32, minimize_process_windows, is_dangerous_process
 
 
 # Always-allowed system processes (do not kill these)
@@ -20,7 +20,7 @@ SYSTEM_WHITELIST = {
     "finder", "dock", "windowserver",
     "sihost.exe", "taskhostw.exe", "runtimebroker.exe",
     "searchhost.exe", "startmenuexperiencehost.exe",
-    "shellhost.exe", "applicationframehost.exe",
+    "shellhost.exe", "applicationframehost.exe", "staylocked", "staylocked.exe",
 }
 
 
@@ -51,7 +51,7 @@ class Enforcer:
                 # Always skip our own process family and system processes
                 if name in self.whitelist:
                     continue
-                if "hardlock" in name or "focus" in name and "micromanager" in name:
+                if "staylocked" in name or "focus" in name and "micromanager" in name:
                     continue
 
                 # Optional: treat Task Manager etc. as blocked

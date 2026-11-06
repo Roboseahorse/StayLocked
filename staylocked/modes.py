@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Callable, Optional
 
-from hardlock.enforcer import Enforcer
+from staylocked.enforcer import Enforcer
 
 
 class BlockRunner:
