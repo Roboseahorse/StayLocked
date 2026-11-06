@@ -30,9 +30,9 @@ Inspired by Cold Turkey Micromanager. Whitelist the apps you need — everything
 
 ---
 
-## Why HardLock?
+## Why StayLocked?
 
-Most distraction blockers let you blacklist sites or apps. HardLock does the opposite — it only lets through the programs you explicitly allow. This creates a much stricter environment that is harder to rationalise your way out of.
+Most distraction blockers let you blacklist sites or apps. StayLocked does the opposite — it only lets through the programs you explicitly allow. This creates a much stricter environment that is harder to rationalise your way out of.
 
 - Unlimited application allowlist + **named profiles**
 - Timed sessions, “until restart”, Pomodoro cycles, or allowance-then-block modes
@@ -48,9 +48,9 @@ Most distraction blockers let you blacklist sites or apps. HardLock does the opp
 ## Project Structure
 
 ```
-hardlock/
+StayLocked/
 ├── __init__.py
-├── __main__.py          # python -m hardlock
+├── __main__.py          # python -m StayLocked
 ├── app.py               # Main CustomTkinter UI
 ├── config.py            # Paths, defaults, load/save
 ├── session.py           # Active session persistence & resume
@@ -81,7 +81,7 @@ During a timed block you can click **+10 min** to extend the session without sto
 
 ## Privacy
 
-HardLock stores everything locally in `~/.hardlock/` (or the equivalent on Windows).
+StayLocked stores everything locally in `~/.StayLocked/` (or the equivalent on Windows).
 
 No telemetry, no accounts, no cloud services.
 
@@ -89,7 +89,7 @@ No telemetry, no accounts, no cloud services.
 
 ## Limitations
 
-HardLock is a user-space application. A determined user can still terminate the process through Task Manager (unless the aggressive protection option is enabled). It is designed to create strong friction against casual distraction, not to provide kernel-level lockdown.
+StayLocked is a user-space application. A determined user can still terminate the process through Task Manager (unless the aggressive protection option is enabled). It is designed to create strong friction against casual distraction, not to provide kernel-level lockdown.
 
 Future improvements (watchdog process, stronger process protection, system tray, scheduling, statistics) are planned on top of this modular base.
 
