@@ -1,10 +1,41 @@
-# HardLock (Modular)
+# StayLocked
 
-**HardLock** is a free, open-source focus tool that locks your computer to only the applications you need.
+**[⬇ Download StayLocked.exe](https://github.com/Roboseahorse/StayLocked/releases/latest/download/StayLocked.exe)**
 
-This is a modular refactor of the original [AstroLabs-UK/HardLock](https://github.com/AstroLabs-UK/HardLock) project.
+Free open-source focus tool that locks your computer to only the applications you allow.
 
-Inspired by Cold Turkey Micromanager, HardLock takes a whitelist approach: you choose the apps that are allowed, and everything else is blocked for the duration of your focus session. Once a session starts, stopping it early is deliberately difficult.
+Inspired by Cold Turkey Micromanager. Whitelist the apps you need — everything else is blocked.
+
+---
+
+## Features
+
+- Unlimited application allowlist + **named profiles**
+- Timed sessions, “until restart”, Pomodoro, or allowance modes
+- **+10 min extend** button during timed blocks
+- Force-close or minimise non-whitelisted apps
+- Optional Task Manager / Process Explorer protection
+- Emergency stop with password + confirmation phrase
+- Session resume if the app is closed mid-session
+- Completely free, no accounts, no tracking
+
+---
+
+## How to use
+
+1. Download `StayLocked.exe` from the link above
+2. Run it
+3. Add the apps you need to the Allowlist
+4. Choose a mode and click **Start Focus Block**
+
+---
+
+## Run from source
+
+```bash
+pip install -r requirements.txt
+pip install pywin32
+python -m hardlock
 
 ---
 
