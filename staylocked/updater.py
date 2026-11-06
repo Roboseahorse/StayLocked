@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -26,14 +27,20 @@ from staylocked.config import (
 
 
 def version_gt(a: str, b: str) -> bool:
+    """True if version a is newer than version b (ignores any v/V prefix)."""
+
     def parts(v: str):
-        nums = []
-        for x in v.replace("-", ".").split("."):
-            if x.isdigit():
-                nums.append(int(x))
-        return nums
+        return [int(x) for x in re.findall(r"\d+", v.split("-")[0])]
 
     return parts(a) > parts(b)
+
+
+def _clean_env() -> dict:
+    """Environment for relaunching a PyInstaller onefile exe as a fresh instance."""
+    env = os.environ.copy()
+    env.pop("_MEIPASS2", None)
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    return env
 
 
 def check_for_updates(
@@ -53,7 +60,7 @@ def check_for_updates(
                 data = json.loads(resp.read().decode())
 
             tag = data.get("tag_name", "")
-            latest = tag.lstrip("v").split("-")[0]
+            latest = tag.lstrip("vV").split("-")[0]
             if not latest:
                 return
 
@@ -62,7 +69,7 @@ def check_for_updates(
                 download_url = None
                 for a in assets:
                     name = a.get("name", "").lower()
-                    if name == "hardlock.exe" or (name.endswith(".exe") and "hardlock" in name):
+                    if name == "staylocked.exe" or (name.endswith(".exe") and "staylocked" in name):
                         download_url = a.get("browser_download_url")
                         break
                 if not download_url:
@@ -111,11 +118,21 @@ def perform_update(
             if sys.platform == "win32":
                 INSTALL_DIR.mkdir(parents=True, exist_ok=True)
                 bat = INSTALL_DIR / "update_helper.bat"
+                # Retry the copy until the old exe has fully exited and
+                # Windows releases the file lock (up to ~20 seconds).
                 bat.write_text(
                     f"""@echo off
-timeout /t 2 /nobreak >nul
-copy /Y "{tmp_path}" "{INSTALL_EXE}"
+set tries=0
+:retry
+timeout /t 1 /nobreak >nul
+copy /Y "{tmp_path}" "{INSTALL_EXE}" >nul 2>&1
+if not errorlevel 1 goto done
+set /a tries+=1
+if %tries% lss 20 goto retry
+goto finish
+:done
 start "" "{INSTALL_EXE}"
+:finish
 del "%~f0"
 """,
                     encoding="utf-8",
@@ -123,8 +140,11 @@ del "%~f0"
                 subprocess.Popen(
                     ["cmd", "/c", str(bat)],
                     creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+                    env=_clean_env(),
                 )
-                sys.exit(0)
+                # sys.exit() only ends this background thread, so force the
+                # whole process to quit. That releases the lock on the exe.
+                os._exit(0)
         except Exception as e:
             if on_error:
                 on_error(str(e))
@@ -164,13 +184,13 @@ def ensure_installed() -> None:
                 / "Programs"
             )
             start_menu.mkdir(parents=True, exist_ok=True)
-            shortcut = start_menu / "HardLock.lnk"
+            shortcut = start_menu / "StayLocked.lnk"
             ps_cmd = (
                 "$ws = New-Object -ComObject WScript.Shell; "
                 f"$s = $ws.CreateShortcut('{shortcut}'); "
                 f"$s.TargetPath = '{INSTALL_EXE}'; "
                 f"$s.WorkingDirectory = '{INSTALL_DIR}'; "
-                "$s.Description = 'HardLock Focus Tool'; "
+                "$s.Description = 'StayLocked Focus Tool'; "
                 "$s.Save()"
             )
             subprocess.run(
@@ -181,7 +201,7 @@ def ensure_installed() -> None:
         except Exception:
             pass
 
-        subprocess.Popen([str(INSTALL_EXE)], cwd=str(INSTALL_DIR))
+        subprocess.Popen([str(INSTALL_EXE)], cwd=str(INSTALL_DIR), env=_clean_env())
         sys.exit(0)
     except Exception:
         pass

@@ -20,7 +20,10 @@ SYSTEM_WHITELIST = {
     "finder", "dock", "windowserver",
     "sihost.exe", "taskhostw.exe", "runtimebroker.exe",
     "searchhost.exe", "startmenuexperiencehost.exe",
-    "shellhost.exe", "applicationframehost.exe", "staylocked", "staylocked.exe",
+    "shellhost.exe", "applicationframehost.exe", "staylocked", "staylocked.exe", "ctfmon.exe", "textinputhost.exe", "searchapp.exe", "searchindexer.exe",
+    "shellexperiencehost.exe", "lockapp.exe", "fontdrvhost.exe",
+    "dllhost.exe", "conhost.exe", "backgroundtaskhost.exe",
+    "widgets.exe", "widgetservice.exe", "securityhealthsystray.exe",
 }
 
 
@@ -66,6 +69,7 @@ class Enforcer:
                     continue
 
                 if self.force_close:
+                    print("blocked:", name)
                     proc.terminate()
                 else:
                     if HAS_WIN32:
