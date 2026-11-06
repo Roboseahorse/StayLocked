@@ -30,15 +30,6 @@ Inspired by Cold Turkey Micromanager. Whitelist the apps you need — everything
 
 ---
 
-## Run from source
-
-```bash
-pip install -r requirements.txt
-pip install pywin32
-python -m hardlock
-
----
-
 ## Why HardLock?
 
 Most distraction blockers let you blacklist sites or apps. HardLock does the opposite — it only lets through the programs you explicitly allow. This creates a much stricter environment that is harder to rationalise your way out of.
@@ -73,32 +64,6 @@ hardlock/
     ├── macos.py         # stubs
     └── linux.py         # stubs
 ```
-
----
-
-## Getting Started
-
-### Run from source
-
-```bash
-pip install -r requirements.txt
-# Recommended on Windows:
-pip install pywin32
-
-python -m hardlock
-```
-
-### Build a Windows executable
-
-```bash
-pip install -r requirements.txt pyinstaller pywin32
-pyinstaller --onefile --windowed --name "HardLock" --icon=icon.png -m hardlock
-```
-
-Or simply run `build_windows.bat`.
-
-The finished `HardLock.exe` will appear in the `dist` folder.
-
 ---
 
 ## How a Session Works
