@@ -1,15 +1,13 @@
 """
 HardLock main application (CustomTkinter UI shell).
 """
-
 from __future__ import annotations
 
-from .running_apps import show_running_apps_dialog
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Set
 
-import threading
 import customtkinter as ctk
 import psutil
 from tkinter import filedialog, messagebox
@@ -474,6 +472,8 @@ class StayLockedApp(ctk.CTk):
             self.allow_listbox.insert("end", app)
 
     def add_running_apps(self):
+        from staylocked.running_apps import show_running_apps_dialog
+
         def on_add(names):
             self.allowlist.update(names)
             save_allowlist(self.allowlist)

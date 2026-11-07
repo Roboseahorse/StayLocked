@@ -1,15 +1,16 @@
 """
-Running-apps picker: a searchable list with app icons.
+Running-apps picker: a fast, searchable list with app icons.
 
-Usage from app.py:
-
-    from staylocked.running_apps import show_running_apps_dialog
+Usage from app.py (import inside the method so it doesn't slow app startup):
 
     def add_running_apps(self):
+        from staylocked.running_apps import show_running_apps_dialog
+
         def on_add(names):
             self.allowlist.update(names)
             save_allowlist(self.allowlist)
             self.refresh_allowlist_box()
+
         show_running_apps_dialog(self, on_add, already=self.allowlist)
 """
 
@@ -18,14 +19,17 @@ from __future__ import annotations
 import ctypes
 import hashlib
 import sys
+import threading
+import time
 import tkinter as tk
+from tkinter import ttk
 from ctypes import wintypes
 from pathlib import Path
-from typing import Callable, Dict, Iterable, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import customtkinter as ctk
 import psutil
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 
 from staylocked.enforcer import SYSTEM_WHITELIST
 
@@ -40,6 +44,8 @@ TEXT = "#F2F2F2"
 MUTED = "#8A8A8A"
 ACCENT = "#D82C2C"
 ACCENT_HOVER = "#A52A2A"
+ACCENT_RGB = (0xD8, 0x2C, 0x2C)
+MUTED_RGB = (0x8A, 0x8A, 0x8A)
 
 ICON_PX = 32     # size icons are rendered at
 ICON_SHOWN = 24  # size icons are displayed at
@@ -189,7 +195,7 @@ def _pids_with_visible_windows() -> Optional[set]:
 
 
 # ----------------------------------------------------------------------
-# Icons
+# Icons (PIL images; cached for the life of the app)
 # ----------------------------------------------------------------------
 
 _PALETTE = [
@@ -197,7 +203,10 @@ _PALETTE = [
     "#A04848", "#4A7F8C", "#7A6A3A", "#5C5F9E",
 ]
 
-_icon_cache: Dict[str, "ctk.CTkImage"] = {}
+_LANCZOS = getattr(Image, "Resampling", Image).LANCZOS
+_icon_pil_cache: Dict[str, Image.Image] = {}
+_tile_cache: Dict[Tuple[str, int], Image.Image] = {}
+_placeholder: Optional[Image.Image] = None
 
 
 def _draw_hicon(hicon, size: int, bg_rgb: Tuple[int, int, int]) -> Optional[Image.Image]:
@@ -283,9 +292,9 @@ def _letter_icon(name: str) -> Image.Image:
     return img
 
 
-def get_icon(name: str, exe: Optional[str]) -> "ctk.CTkImage":
+def get_icon_pil(name: str, exe: Optional[str]) -> Image.Image:
     key = (exe or name).lower()
-    cached = _icon_cache.get(key)
+    cached = _icon_pil_cache.get(key)
     if cached is not None:
         return cached
     img = None
@@ -296,13 +305,65 @@ def get_icon(name: str, exe: Optional[str]) -> "ctk.CTkImage":
             img = None
     if img is None:
         img = _letter_icon(name)
-    icon = ctk.CTkImage(light_image=img, dark_image=img, size=(ICON_SHOWN, ICON_SHOWN))
-    _icon_cache[key] = icon
-    return icon
+    _icon_pil_cache[key] = img
+    return img
+
+
+def _placeholder_icon() -> Image.Image:
+    """Neutral icon shown for a split second until the real one is loaded."""
+    global _placeholder
+    if _placeholder is None:
+        img = Image.new("RGB", (ICON_PX, ICON_PX), LIST_BG_RGB)
+        ImageDraw.Draw(img).rounded_rectangle(
+            (2, 2, ICON_PX - 3, ICON_PX - 3), radius=8, fill="#343434"
+        )
+        _placeholder = img
+    return _placeholder
+
+
+def _checkbox_tile(state: str, size: int) -> Image.Image:
+    """Anti-aliased checkbox: 'unchecked', 'checked' or 'added' (disabled)."""
+    key = (state, size)
+    cached = _tile_cache.get(key)
+    if cached is not None:
+        return cached
+    big = size * 4
+    img = Image.new("RGB", (big, big), LIST_BG_RGB)
+    d = ImageDraw.Draw(img)
+    pad = big // 12
+    box = (pad, pad, big - pad - 1, big - pad - 1)
+    radius = big // 5
+    if state == "unchecked":
+        d.rounded_rectangle(box, radius=radius, outline=MUTED_RGB, width=max(3, big // 14))
+    else:
+        fill = ACCENT_RGB if state == "checked" else (80, 80, 80)
+        tick = (255, 255, 255) if state == "checked" else (170, 170, 170)
+        d.rounded_rectangle(box, radius=radius, fill=fill)
+        pts = [(big * 0.26, big * 0.52), (big * 0.43, big * 0.69), (big * 0.76, big * 0.31)]
+        d.line(pts, fill=tick, width=max(4, big // 9), joint="curve")
+    tile = img.resize((size, size), _LANCZOS)
+    _tile_cache[key] = tile
+    return tile
+
+
+def _compose_row_image(icon: Image.Image, state: str, scale: float) -> Image.Image:
+    """[checkbox][icon] strip shown at the left of each row."""
+    box = round(18 * scale)
+    icon_px = round(ICON_SHOWN * scale)
+    gap = round(10 * scale)
+    pad = round(6 * scale)
+    height = round(30 * scale)
+    out = Image.new("RGB", (pad + box + gap + icon_px, height), LIST_BG_RGB)
+    out.paste(_checkbox_tile(state, box), (pad, (height - box) // 2))
+    out.paste(
+        icon.resize((icon_px, icon_px), _LANCZOS),
+        (pad + box + gap, (height - icon_px) // 2),
+    )
+    return out
 
 
 # ----------------------------------------------------------------------
-# Collecting apps
+# Collecting apps (runs in a background thread)
 # ----------------------------------------------------------------------
 
 def _collect_running_apps() -> Tuple[Dict[str, dict], bool]:
@@ -344,8 +405,6 @@ def show_running_apps_dialog(
 ) -> None:
     """Open the picker. on_add receives the set of chosen process names."""
     already_set = {a.lower() for a in (already or [])}
-    entries, can_filter = _collect_running_apps()
-    order = sorted(entries, key=lambda n: (n in already_set, n))
 
     top = ctk.CTkToplevel(parent)
     top.title("Add Running Apps")
@@ -359,6 +418,16 @@ def show_running_apps_dialog(
     except Exception:
         top.geometry(f"{width}x{height}")
     top.transient(parent)
+
+    scale = max(1.0, top.winfo_fpixels("1i") / 96.0)
+
+    # Data filled in once the background scan finishes
+    entries: Dict[str, dict] = {}
+    order: List[str] = []
+    state = {"can_filter": True, "loaded": False, "debounce": None}
+    chosen: set = set()
+    icon_pil: Dict[str, Image.Image] = {}
+    photos: Dict[Tuple[str, str], ImageTk.PhotoImage] = {}
 
     def _grab():
         try:
@@ -375,7 +444,7 @@ def show_running_apps_dialog(
     header.pack(fill="x", padx=14, pady=(14, 6))
 
     search = ctk.CTkEntry(
-        header, placeholder_text="🔍  Search apps…", height=36,
+        header, placeholder_text="Search apps…", height=36,
         fg_color=LIST_BG, border_color="#3A3A3A", text_color=TEXT,
     )
     search.pack(fill="x")
@@ -385,11 +454,8 @@ def show_running_apps_dialog(
         selected_color=ACCENT, selected_hover_color=ACCENT_HOVER,
         unselected_color=LIST_BG, unselected_hover_color="#333333",
     )
-    if can_filter:
-        view.set("Apps")
-        view.pack(fill="x", pady=(8, 0))
-    else:
-        view.set("All processes")
+    view.set("Apps")
+    view.pack(fill="x", pady=(8, 0))
 
     hint = ctk.CTkLabel(
         header, text="", text_color=MUTED, font=ctk.CTkFont(size=11),
@@ -397,15 +463,45 @@ def show_running_apps_dialog(
     )
     hint.pack(fill="x", pady=(6, 0))
 
-    # ---- list ---------------------------------------------------------
-    listf = ctk.CTkScrollableFrame(top, fg_color=LIST_BG, corner_radius=8)
-    listf.pack(fill="both", expand=True, padx=14, pady=6)
-    listf.grid_columnconfigure(0, weight=1)
+    # ---- list (native Treeview: stays fast with hundreds of rows) -----
+    ttk_style = ttk.Style(top)
+    prev_theme = ttk_style.theme_use()
+    ttk_style.theme_use("clam")
+    ttk_style.configure(
+        "Picker.Treeview", background=LIST_BG, fieldbackground=LIST_BG,
+        foreground=TEXT, borderwidth=0, rowheight=round(34 * scale),
+        font=("Segoe UI", 11),
+    )
+    ttk_style.layout("Picker.Treeview", [("Treeview.treearea", {"sticky": "nswe"})])
 
-    empty_label = ctk.CTkLabel(listf, text="No matching apps", text_color=MUTED)
+    def _on_destroy(event):
+        if event.widget is top:
+            try:
+                ttk_style.theme_use(prev_theme)
+            except Exception:
+                pass
 
-    rows: Dict[str, ctk.CTkFrame] = {}
-    selected_vars: Dict[str, tk.BooleanVar] = {}
+    top.bind("<Destroy>", _on_destroy, add="+")
+
+    list_frame = ctk.CTkFrame(top, fg_color=LIST_BG, corner_radius=8)
+    list_frame.pack(fill="both", expand=True, padx=14, pady=6)
+    scrollbar = ctk.CTkScrollbar(list_frame)
+    scrollbar.pack(side="right", fill="y", padx=(0, 4), pady=6)
+    tree = ttk.Treeview(
+        list_frame, style="Picker.Treeview", columns=("proc",),
+        show="tree", selectmode="none",
+    )
+    tree.pack(side="left", fill="both", expand=True, padx=(6, 0), pady=6)
+    tree.column("#0", stretch=True, anchor="w")
+    tree.column("proc", width=round(170 * scale), stretch=False, anchor="e")
+    tree.tag_configure("added", foreground=MUTED)
+    scrollbar.configure(command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    status_label = ctk.CTkLabel(
+        list_frame, text="Loading running apps…", text_color=MUTED, fg_color=LIST_BG,
+    )
+    status_label.place(relx=0.5, rely=0.35, anchor="center")
 
     # ---- footer -------------------------------------------------------
     footer = ctk.CTkFrame(top, fg_color="transparent")
@@ -415,12 +511,14 @@ def show_running_apps_dialog(
     count_label.pack(side="left")
 
     def add_selected():
-        names = {n for n, v in selected_vars.items() if v.get()}
+        names = set(chosen)
         top.destroy()
         if names:
             on_add(names)
 
-    add_btn = ctk.CTkButton(footer, text="Add Selected", width=140, command=add_selected)
+    add_btn = ctk.CTkButton(
+        footer, text="Add Selected", width=140, command=add_selected, state="disabled",
+    )
     add_btn.pack(side="right")
     ctk.CTkButton(
         footer, text="Cancel", width=80, fg_color="#555555",
@@ -428,7 +526,7 @@ def show_running_apps_dialog(
     ).pack(side="right", padx=(0, 8))
 
     def update_count():
-        n = sum(1 for v in selected_vars.values() if v.get())
+        n = len(chosen)
         count_label.configure(text=f"{n} selected" if n else "")
         add_btn.configure(
             text=f"Add Selected ({n})" if n else "Add Selected",
@@ -436,76 +534,124 @@ def show_running_apps_dialog(
         )
 
     # ---- rows ---------------------------------------------------------
-    def build_row(name: str) -> ctk.CTkFrame:
-        info = entries[name]
-        is_added = name in already_set
-        var = tk.BooleanVar(value=False)
-        selected_vars[name] = var
+    def row_state(name: str) -> str:
+        if name in already_set:
+            return "added"
+        return "checked" if name in chosen else "unchecked"
 
-        row = ctk.CTkFrame(listf, fg_color="transparent", corner_radius=6)
-        row.grid_columnconfigure(2, weight=1)
-
-        cb = ctk.CTkCheckBox(
-            row, text="", variable=var, width=24, checkbox_width=20, checkbox_height=20,
-            fg_color=ACCENT, hover_color=ACCENT_HOVER, command=update_count,
-        )
-        cb.grid(row=0, column=0, padx=(8, 4), pady=6)
-
-        icon = ctk.CTkLabel(row, text="", image=get_icon(name, info["exe"]), width=ICON_SHOWN)
-        icon.grid(row=0, column=1, padx=(0, 8), pady=6)
-
-        title = ctk.CTkLabel(
-            row, text=_friendly_name(name), anchor="w", font=ctk.CTkFont(size=13),
-            text_color=MUTED if is_added else TEXT,
-        )
-        title.grid(row=0, column=2, sticky="ew")
-
-        tag = ctk.CTkLabel(
-            row, text="already added" if is_added else name, anchor="e",
-            text_color=MUTED, font=ctk.CTkFont(size=11),
-        )
-        tag.grid(row=0, column=3, padx=(8, 10))
-
-        if is_added:
-            cb.configure(state="disabled")
-        else:
-            def toggle(_event=None):
-                var.set(not var.get())
-                update_count()
-
-            for widget in (row, icon, title, tag):
-                widget.bind("<Button-1>", toggle)
-
-        return row
+    def photo(name: str, st: str) -> ImageTk.PhotoImage:
+        key = (name, st)
+        p = photos.get(key)
+        if p is None:
+            pil = icon_pil.get(name) or _placeholder_icon()
+            p = ImageTk.PhotoImage(_compose_row_image(pil, st, scale), master=top)
+            photos[key] = p
+        return p
 
     def refresh():
+        if not state["loaded"]:
+            return
         query = search.get().strip().lower()
-        show_all = (not can_filter) or view.get() == "All processes"
+        show_all = (not state["can_filter"]) or view.get() == "All processes"
         names = [
             n for n in order
             if (show_all or entries[n]["windowed"])
             and (not query or query in n or query in _friendly_name(n).lower())
         ]
-
         hint.configure(
             text="" if show_all else
             "Apps with open windows. Use “All processes” for background or tray apps."
         )
-
-        top.configure(cursor="watch")
-        top.update_idletasks()
-        for r in rows.values():
-            r.grid_remove()
-        empty_label.grid_remove()
-        for i, n in enumerate(names):
-            row = rows.get(n)
-            if row is None:
-                row = rows[n] = build_row(n)
-            row.grid(row=i, column=0, sticky="ew", padx=4, pady=1)
-        if not names:
-            empty_label.grid(row=0, column=0, pady=30)
-        top.configure(cursor="")
+        tree.delete(*tree.get_children())
+        for n in names:
+            tree.insert(
+                "", "end", iid=n, text=_friendly_name(n), values=(n,),
+                image=photo(n, row_state(n)),
+                tags=("added",) if n in already_set else (),
+            )
+        if names:
+            status_label.place_forget()
+        else:
+            status_label.configure(text="No matching apps")
+            status_label.place(relx=0.5, rely=0.35, anchor="center")
         update_count()
 
-    search.bind("<KeyRelease>", lambda _e: refresh())
-    refresh()
+    def on_click(event):
+        if tree.identify_region(event.x, event.y) not in ("tree", "cell"):
+            return "break"
+        name = tree.identify_row(event.y)
+        if not name or name in already_set:
+            return "break"
+        if name in chosen:
+            chosen.discard(name)
+        else:
+            chosen.add(name)
+        tree.item(name, image=photo(name, row_state(name)))
+        update_count()
+        return "break"
+
+    tree.bind("<Button-1>", on_click)
+
+    def on_key(_event=None):
+        if state["debounce"] is not None:
+            top.after_cancel(state["debounce"])
+        state["debounce"] = top.after(60, refresh)
+
+    search.bind("<KeyRelease>", on_key)
+
+    # ---- progressive icon loading --------------------------------------
+    icon_queue: List[str] = []
+
+    def load_icons():
+        if not top.winfo_exists():
+            return
+        started = time.perf_counter()
+        while icon_queue and time.perf_counter() - started < 0.012:
+            name = icon_queue.pop(0)
+            try:
+                icon_pil[name] = get_icon_pil(name, entries[name]["exe"])
+            except Exception:
+                continue
+            for st in ("unchecked", "checked", "added"):
+                photos.pop((name, st), None)
+            if tree.exists(name):
+                tree.item(name, image=photo(name, row_state(name)))
+        if icon_queue:
+            top.after(2, load_icons)
+
+    # ---- background scan, then populate --------------------------------
+    result: dict = {}
+
+    def worker():
+        try:
+            result["data"] = _collect_running_apps()
+        except Exception:
+            result["data"] = ({}, False)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def poll():
+        try:
+            if not top.winfo_exists():
+                return
+        except Exception:
+            return
+        if "data" not in result:
+            top.after(40, poll)
+            return
+        found, can_filter = result["data"]
+        entries.update(found)
+        order.extend(sorted(entries, key=lambda n: (n in already_set, n)))
+        state["can_filter"] = can_filter
+        state["loaded"] = True
+        if not can_filter:
+            view.set("All processes")
+            view.pack_forget()
+        icon_queue.extend(
+            sorted((n for n in entries if entries[n]["windowed"]))
+            + sorted((n for n in entries if not entries[n]["windowed"]))
+        )
+        refresh()
+        top.after(5, load_icons)
+
+    top.after(30, poll)
