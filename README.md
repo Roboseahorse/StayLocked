@@ -1,6 +1,6 @@
 # StayLocked
 
-**[⬇ Download StayLocked.exe](https://github.com/Roboseahorse/StayLocked/releases/latest/download/StayLocked.exe)**
+**[⬇ Download StayLocked.exe](https://github.com/Roboseahorse/StayLocked/releases/latest/download/StayLocked.exe)** ready to run, no install needed
 
 Free open-source focus tool that locks your computer to only the applications you allow.
 
