@@ -1,6 +1,6 @@
 # StayLocked
 
-**[⬇ Download StayLocked.exe](https://github.com/Roboseahorse/StayLocked/releases/latest/download/StayLocked.exe)**
+**[⬇ Download StayLocked.exe](https://github.com/Roboseahorse/StayLocked/releases/latest/download/StayLocked.exe)** ready to run, no install needed
 
 Free open-source focus tool that locks your computer to only the applications you allow.
 
@@ -30,18 +30,9 @@ Inspired by Cold Turkey Micromanager. Whitelist the apps you need — everything
 
 ---
 
-## Run from source
+## Why StayLocked?
 
-```bash
-pip install -r requirements.txt
-pip install pywin32
-python -m hardlock
-
----
-
-## Why HardLock?
-
-Most distraction blockers let you blacklist sites or apps. HardLock does the opposite — it only lets through the programs you explicitly allow. This creates a much stricter environment that is harder to rationalise your way out of.
+Most distraction blockers let you blacklist sites or apps. StayLocked does the opposite — it only lets through the programs you explicitly allow. This creates a much stricter environment that is harder to rationalise your way out of.
 
 - Unlimited application allowlist + **named profiles**
 - Timed sessions, “until restart”, Pomodoro cycles, or allowance-then-block modes
@@ -57,9 +48,9 @@ Most distraction blockers let you blacklist sites or apps. HardLock does the opp
 ## Project Structure
 
 ```
-hardlock/
+StayLocked/
 ├── __init__.py
-├── __main__.py          # python -m hardlock
+├── __main__.py          # python -m StayLocked
 ├── app.py               # Main CustomTkinter UI
 ├── config.py            # Paths, defaults, load/save
 ├── session.py           # Active session persistence & resume
@@ -73,32 +64,6 @@ hardlock/
     ├── macos.py         # stubs
     └── linux.py         # stubs
 ```
-
----
-
-## Getting Started
-
-### Run from source
-
-```bash
-pip install -r requirements.txt
-# Recommended on Windows:
-pip install pywin32
-
-python -m hardlock
-```
-
-### Build a Windows executable
-
-```bash
-pip install -r requirements.txt pyinstaller pywin32
-pyinstaller --onefile --windowed --name "HardLock" --icon=icon.png -m hardlock
-```
-
-Or simply run `build_windows.bat`.
-
-The finished `HardLock.exe` will appear in the `dist` folder.
-
 ---
 
 ## How a Session Works
@@ -116,7 +81,7 @@ During a timed block you can click **+10 min** to extend the session without sto
 
 ## Privacy
 
-HardLock stores everything locally in `~/.hardlock/` (or the equivalent on Windows).
+StayLocked stores everything locally in `~/.StayLocked/` (or the equivalent on Windows).
 
 No telemetry, no accounts, no cloud services.
 
@@ -124,7 +89,7 @@ No telemetry, no accounts, no cloud services.
 
 ## Limitations
 
-HardLock is a user-space application. A determined user can still terminate the process through Task Manager (unless the aggressive protection option is enabled). It is designed to create strong friction against casual distraction, not to provide kernel-level lockdown.
+StayLocked is a user-space application. A determined user can still terminate the process through Task Manager (unless the aggressive protection option is enabled). It is designed to create strong friction against casual distraction, not to provide kernel-level lockdown.
 
 Future improvements (watchdog process, stronger process protection, system tray, scheduling, statistics) are planned on top of this modular base.
 
