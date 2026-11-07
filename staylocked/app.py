@@ -2,7 +2,7 @@
 HardLock main application (CustomTkinter UI shell).
 """
 from __future__ import annotations
-
+import sys
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -12,6 +12,11 @@ import customtkinter as ctk
 import psutil
 from tkinter import filedialog, messagebox
 import tkinter as tk
+
+def resource_path(name: str) -> str:
+  """Find a bundled file when running from source or from the built exe."""
+  base = getattr(sys, "_MEIPASS", None) or Path(__file__).resolve().parent.parent
+  return str(Path(base) / name)
 
 from staylocked import __version__
 from staylocked.config import (
@@ -50,6 +55,17 @@ ctk.set_default_color_theme("dark-blue")
 class StayLockedApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        try:
+            self.iconbitmap(resource_path("icon.ico"))
+        except Exception:
+            pass
+
+        self.title(APP_NAME)
+        self.geometry("820x680")
+        self.minsize(720, 580)
+        self.configure(fg_color="#1A1A1A")
+
 
         self.title(APP_NAME)
         self.geometry("820x680")
