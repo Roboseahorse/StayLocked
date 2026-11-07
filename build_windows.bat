@@ -1,11 +1,7 @@
 @echo off
-echo Installing dependencies...
+echo Building HardLock Windows executable...
 pip install -r requirements.txt pyinstaller pywin32
+pyinstaller --onefile --windowed --name "HardLock" --icon=icon.png -m hardlock
 echo.
-echo Building HardLock.exe ...
-REM Use --uac-admin only. Do NOT also pass --manifest (causes SxS errors).
-pyinstaller --onefile --windowed --name "HardLock" --icon=icon.png --uac-admin --clean app.py
-echo.
-echo Done! Look in the dist\ folder for HardLock.exe
-echo The EXE will request Administrator privileges on launch.
+echo Done. Look in the dist\ folder for HardLock.exe
 pause

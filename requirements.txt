@@ -2,5 +2,5 @@ customtkinter>=5.2.0
 psutil>=5.9.0
 plyer>=2.1.0
 Pillow>=10.0.0
-# For Windows minimize support (install on Windows):
+# For Windows minimize / stronger process control (recommended on Windows):
 # pywin32
