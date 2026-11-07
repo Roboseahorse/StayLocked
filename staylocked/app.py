@@ -4,11 +4,12 @@ HardLock main application (CustomTkinter UI shell).
 
 from __future__ import annotations
 
-import threading
+from .running_apps import show_running_apps_dialog
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Set
 
+import threading
 import customtkinter as ctk
 import psutil
 from tkinter import filedialog, messagebox
@@ -473,37 +474,12 @@ class StayLockedApp(ctk.CTk):
             self.allow_listbox.insert("end", app)
 
     def add_running_apps(self):
-        running = set()
-        for proc in psutil.process_iter(["name"]):
-            try:
-                name = proc.info["name"]
-                if name:
-                    running.add(name.lower())
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-
-        top = ctk.CTkToplevel(self)
-        top.title("Select Running Apps")
-        top.geometry("420x480")
-        top.transient(self)
-        top.grab_set()
-
-        ctk.CTkLabel(top, text="Select apps to add to whitelist:").pack(pady=8)
-        lb = tk.Listbox(
-            top, selectmode="extended", bg="#252525", fg="#F2F2F2", font=("Segoe UI", 11)
-        )
-        lb.pack(fill="both", expand=True, padx=10, pady=5)
-        for name in sorted(running):
-            lb.insert("end", name)
-
-        def add_selected():
-            for i in lb.curselection():
-                self.allowlist.add(lb.get(i))
+        def on_add(names):
+            self.allowlist.update(names)
             save_allowlist(self.allowlist)
             self.refresh_allowlist_box()
-            top.destroy()
 
-        ctk.CTkButton(top, text="Add Selected", command=add_selected).pack(pady=10)
+        show_running_apps_dialog(self, on_add, already=self.allowlist)
 
     def add_manual(self):
         dialog = ctk.CTkInputDialog(
