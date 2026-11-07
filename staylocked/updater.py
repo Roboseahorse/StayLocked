@@ -152,8 +152,31 @@ del "%~f0"
     threading.Thread(target=worker, daemon=True).start()
 
 
+VERSION_FILE = INSTALL_DIR / "installed_version.txt"
+
+
+def _read_installed_version() -> Optional[str]:
+    """Version of the exe in the install folder (None if unknown)."""
+    try:
+        text = VERSION_FILE.read_text(encoding="utf-8").strip()
+        return text or None
+    except Exception:
+        return None
+
+
+def _write_installed_version(version: str) -> None:
+    try:
+        VERSION_FILE.write_text(version, encoding="utf-8")
+    except Exception:
+        pass
+
+
 def ensure_installed() -> None:
-    """Copy the EXE to a permanent location on first run (Windows frozen)."""
+    """Make sure the app runs from the permanent install location (Windows frozen).
+
+    Never replaces a newer installed copy with an older exe: launching an old
+    downloaded exe just opens the installed (newer) copy instead.
+    """
     if not getattr(sys, "frozen", False):
         return
     if sys.platform != "win32":
@@ -167,12 +190,29 @@ def ensure_installed() -> None:
 
     try:
         if current == INSTALL_EXE.resolve():
+            _write_installed_version(APP_VERSION)
             return
     except Exception:
         pass
 
+    # Launched from somewhere else (e.g. the originally downloaded exe).
+    # If the installed copy is the same version or newer, don't overwrite it
+    # (that would undo an auto-update) - just open the installed copy.
+    installed_version = _read_installed_version()
+    if (
+        INSTALL_EXE.exists()
+        and installed_version
+        and not version_gt(APP_VERSION, installed_version)
+    ):
+        try:
+            subprocess.Popen([str(INSTALL_EXE)], cwd=str(INSTALL_DIR), env=_clean_env())
+            sys.exit(0)
+        except Exception:
+            return  # couldn't launch it; just run this copy
+
     try:
         shutil.copy2(current, INSTALL_EXE)
+        _write_installed_version(APP_VERSION)
 
         # Best-effort Start Menu shortcut
         try:
