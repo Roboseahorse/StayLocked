@@ -18,6 +18,8 @@ Inspired by Cold Turkey Micromanager. Whitelist the apps you need — everything
 - Emergency stop with password + confirmation phrase
 - Session resume if the app is closed mid-session
 - Completely free, no accounts, no tracking
+<img width="1372" height="1119" alt="image" src="https://github.com/user-attachments/assets/ae652e79-63c3-4e2f-a1c9-00166fafbbd3" />
+<img width="1369" height="1318" alt="image" src="https://github.com/user-attachments/assets/ddd846b0-0046-46fc-8595-350bfc0a25da" />
 
   <img width="364" height="489" alt="Screenshot 2026-11-07 111409" src="https://github.com/user-attachments/assets/04fa994d-567e-4b32-b562-36f17356dc05" />
 
