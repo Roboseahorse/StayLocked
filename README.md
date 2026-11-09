@@ -32,6 +32,50 @@ Inspired by Cold Turkey Micromanager. Whitelist the apps you need — everything
 
 ---
 
+## Install from source
+
+Prefer running StayLocked straight from the code? You'll need **Python 3.10 or newer** and **Git**.
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/Roboseahorse/StayLocked.git
+   cd StayLocked
+   ```
+
+2. **Install the dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   On Windows, `pywin32` is optional but gives better window-minimise support:
+
+   ```bash
+   pip install pywin32
+   ```
+
+3. **Run it**
+
+   ```bash
+   python run_staylocked.py
+   ```
+
+   You can also start it with `python -m staylocked`.
+
+Your allowlist, profiles, settings and greeting phrases are saved in a `.staylocked` folder in your home directory (for example `C:\Users\<you>\.staylocked` on Windows).
+
+### Build the exe yourself (optional)
+
+```bash
+pip install pyinstaller
+python -m PyInstaller --clean --onefile --windowed --name StayLocked --icon logos/icon.ico --add-data "logos/icon.ico;logos" --hidden-import staylocked.running_apps --collect-all customtkinter run_staylocked.py
+```
+
+The finished `StayLocked.exe` will be in the `dist` folder.
+
+---
+
 ## Why StayLocked?
 
 Most distraction blockers let you blacklist sites or apps. StayLocked does the opposite — it only lets through the programs you explicitly allow. This creates a much stricter environment that is harder to rationalise your way out of.
